@@ -19,15 +19,14 @@ RUN composer install --no-dev --no-interaction --no-scripts --prefer-dist
 COPY . .
 COPY --from=assets /app/public/build ./public/build
 
-# Подготовка окружения: .env, ключ, файл БД (без миграций на этапе сборки)
+# Подготовка окружения: .env, файл БД, права. Миграции и ключ — при старте.
 RUN cp -n .env.example .env || true \
     && mkdir -p database && touch database/database.sqlite \
-    && chmod -R 777 storage bootstrap/cache database
+    && chmod -R 777 storage bootstrap/cache database \
+    && chmod +x docker/entrypoint.sh
 
 EXPOSE 8000
 
-# При старте: очищаем кэш конфига чтобы APP_KEY был прочитан из env,
-# затем миграции + сидер (база не персистится на free-плане), затем сервер на $PORT
-CMD php artisan config:clear \
-    && php artisan migrate --force --seed \
-    && php artisan serve --host=0.0.0.0 --port=${PORT:-8000}
+# entrypoint при старте: переносит APP_KEY/APP_DEBUG из окружения в .env,
+# чистит кэш конфига, накатывает миграции с сидером и поднимает сервер на $PORT.
+CMD ["sh", "docker/entrypoint.sh"]
