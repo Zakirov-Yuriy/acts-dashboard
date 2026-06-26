@@ -26,6 +26,8 @@ RUN cp -n .env.example .env || true \
 
 EXPOSE 8000
 
-# При старте: миграции + сидер (база не персистится на free-плане), затем сервер на $PORT
-CMD php artisan migrate --force --seed \
+# При старте: очищаем кэш конфига чтобы APP_KEY был прочитан из env,
+# затем миграции + сидер (база не персистится на free-плане), затем сервер на $PORT
+CMD php artisan config:clear \
+    && php artisan migrate --force --seed \
     && php artisan serve --host=0.0.0.0 --port=${PORT:-8000}
