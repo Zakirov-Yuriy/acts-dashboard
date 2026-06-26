@@ -19,12 +19,13 @@ RUN composer install --no-dev --no-interaction --no-scripts --prefer-dist
 COPY . .
 COPY --from=assets /app/public/build ./public/build
 
-# Подготовка окружения и БД
+# Подготовка окружения: .env, ключ, файл БД (без миграций на этапе сборки)
 RUN cp -n .env.example .env || true \
-    && php artisan key:generate --force \
     && mkdir -p database && touch database/database.sqlite \
-    && php artisan migrate --seed --force \
     && chmod -R 777 storage bootstrap/cache database
 
 EXPOSE 8000
-CMD ["php", "artisan", "serve", "--host=0.0.0.0", "--port=8000"]
+
+# При старте: миграции + сидер (база не персистится на free-плане), затем сервер на $PORT
+CMD php artisan migrate --force --seed \
+    && php artisan serve --host=0.0.0.0 --port=${PORT:-8000}
